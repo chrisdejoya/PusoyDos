@@ -6,10 +6,9 @@ public class GameManager : MonoBehaviour
 {
     public int numberOfPlayers;
     public int cardsPerPlayer;
-    public GameObject cardPrefab;
     public GameObject playerPrefab;
     public Transform dealer;
-    public GameObject[] playerPositions; // Changed to array of player prefabs
+    public GameObject[] pusoyDosPlayers;
     public float dealAnimationSpeed = 1.0f;
 
     public Deck deck;
@@ -18,12 +17,13 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         InitializeComponents();
+        //Debug.Log("Player List: " + pusoyDosPlayers.Length);
         StartCoroutine(DealCardsWithAnimation(cardsPerPlayer));
     }
 
     void InitializeComponents()
     {
-        if (playerPositions.Length < numberOfPlayers)
+        if (pusoyDosPlayers.Length < numberOfPlayers)
         {
             Debug.LogError("Insufficient player positions provided.");
             return;
@@ -51,38 +51,26 @@ public class GameManager : MonoBehaviour
 
     IEnumerator DealCardsWithAnimation(int cardsToDealPerPlayer)
     {
+        //Debug.Log("Number of Players: " + numberOfPlayers);
         float dealDelay = 0.5f / dealAnimationSpeed;
 
         for (int i = 0; i < cardsToDealPerPlayer; i++)
         {
             for (int j = 0; j < numberOfPlayers; j++)
             {
-                Player player = playerPositions[j].GetComponent<Player>(); // Get the player component from the prefab
-                Card dealtCard = deck.DealCard();
+                Player player = pusoyDosPlayers[j].GetComponent<Player>();                
+                Card dealtCard = deck.DealCard();                
                 if (dealtCard != null)
                 {
                     player.hand.Add(dealtCard);
 
                     Vector3 startPosition = dealer.position;
-                    Vector3 targetPosition = playerPositions[j].transform.position; // Get transform position from the prefab
+                    Vector3 targetPosition = player.transform.position;
 
-                    GameObject cardObj = Instantiate(cardPrefab, startPosition, Quaternion.identity);
-                    cardObj.name = dealtCard.cardName;
+                    GameObject cardObj = deck.CreateCardObject(dealtCard, startPosition, dealer);
 
-                    CardDisplay cardDisplay = cardObj.GetComponent<CardDisplay>();
-                    if (cardDisplay != null)
-                    {
-                        cardDisplay.cardName = dealtCard.cardName;
-                        cardDisplay.cardValue = dealtCard.cardValue;
-                        cardDisplay.DisplayCard();
-                    }
-                    else
-                    {
-                        Debug.LogError("Card prefab is missing CardDisplay script.");
-                    }
-
-                    StartCoroutine(MoveCardSmoothly(cardObj.transform, targetPosition, dealDelay));
-                    StartCoroutine(ParentCardToPlayer(cardObj.transform, playerPositions[j].transform, dealDelay));
+                    yield return StartCoroutine(MoveCardSmoothly(cardObj.transform, targetPosition, dealDelay));
+                    cardObj.transform.SetParent(player.transform);
                 }
                 else
                 {
@@ -95,7 +83,6 @@ public class GameManager : MonoBehaviour
         }
         gameplayManager.MovePointerToLowestCardPlayer();
     }
-
 
     IEnumerator MoveCardSmoothly(Transform cardTransform, Vector3 targetPosition, float duration)
     {
@@ -110,11 +97,5 @@ public class GameManager : MonoBehaviour
         }
 
         cardTransform.position = targetPosition;
-    }
-
-    IEnumerator ParentCardToPlayer(Transform cardTransform, Transform playerPosition, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        cardTransform.SetParent(playerPosition);
     }
 }

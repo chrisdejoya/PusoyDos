@@ -5,11 +5,22 @@ using System.IO;
 public class Deck : MonoBehaviour
 {
     [SerializeField] public CardRules cardRules; // Reference to the CardRules script
-    [SerializeField] private List<string> cardNames = new List<string>(); // Names of all the cards in the deck
-    public List<Card> cards = new List<Card>();
+    [SerializeField] private GameObject cardPrefab; // Reference to the Card prefab    
+    [SerializeField] public List<Card> cards = new List<Card>(); // Make sure the list is serialized to be visible in the Inspector    
 
     void Start()
     {
+        // Check if CardRules script is assigned
+        if (cardRules == null)
+        {
+            Debug.LogError("CardRules script not assigned to the Deck.");
+        }
+
+        // Check if Card prefab is assigned
+        if (cardPrefab == null)
+        {
+            Debug.LogError("Card prefab not assigned to the Deck.");
+        }
     }
 
     // Generate a standard deck of 52 cards
@@ -21,27 +32,29 @@ public class Deck : MonoBehaviour
             return;
         }
 
+        cards.Clear();
         int cardValue = 1; // Initialize card value counter
 
+        // Iterate through suits and ranks to generate cards
         foreach (string suit in cardRules.suitValues)
         {
-            foreach (string card in cardRules.cardValues)
+            foreach (string rank in cardRules.cardValues)
             {
-                Debug.Log(cardValue);
-                string cardName = card + " of " + suit;
-                cards.Add(new Card(cardName, cardValue, suit, card)); // Pass suit and rank to Card constructor
-                cardValue++; // Increment card value for next card
+                string cardName = $"{rank} of {suit}";
+                Card card = new Card(cardName, cardValue++, suit, rank);
+                cards.Add(card);
             }
-        }
+        }        
     }
 
     // Shuffle the deck
     public void Shuffle()
     {
-        for (int i = 0; i < cards.Count; i++)
+        // Fisher-Yates shuffle algorithm
+        for (int i = cards.Count - 1; i > 0; i--)
         {
+            int randomIndex = Random.Range(0, i + 1);
             Card temp = cards[i];
-            int randomIndex = Random.Range(i, cards.Count);
             cards[i] = cards[randomIndex];
             cards[randomIndex] = temp;
         }
@@ -56,17 +69,38 @@ public class Deck : MonoBehaviour
             return null;
         }
 
-        Card dealtCard = cards[0];
+        Card dealtCard = cards[0];        
         cards.RemoveAt(0);
         return dealtCard;
+    }
+
+    // Create a card GameObject and parent it to the dealer
+    public GameObject CreateCardObject(Card card, Vector3 startPosition, Transform dealerTransform)
+    {
+        // Instantiate card prefab at start position and set its parent to dealerTransform
+        GameObject cardObj = Instantiate(cardPrefab, startPosition, Quaternion.identity, dealerTransform);
+        cardObj.name = card.cardName;
+
+        // Configure CardDisplay component if present
+        if (cardObj.TryGetComponent(out CardDisplay cardDisplay))
+        {
+            cardDisplay.cardName = card.cardName;
+            cardDisplay.cardValue = card.cardValue;
+            cardDisplay.DisplayCard();
+        }
+        else
+        {
+            Debug.LogError("Card prefab is missing CardDisplay script.");
+        }
+
+        return cardObj;
     }
 
     // Export the list of cards to a text file
     [ContextMenu("Export Card List")]
     public void ExportCardList()
     {
-        string filePath = "Assets/CardList.txt";
-        ExportCardList(filePath);
+        ExportCardList("Assets/CardList.txt");
     }
 
     // Export the list of cards to a text file
@@ -78,17 +112,14 @@ public class Deck : MonoBehaviour
             return;
         }
 
-        // Open a file stream for writing
         using (StreamWriter writer = new StreamWriter(filePath))
         {
-            // Write each card name to the file
             foreach (Card card in cards)
             {
-                writer.WriteLine(card.cardName + ", " + card.cardValue);
+                writer.WriteLine($"{card.cardName}, {card.cardValue}");
             }
         }
 
-        Debug.Log("Card list exported successfully to: " + filePath);
+        Debug.Log($"Card list exported successfully to: {filePath}");
     }
-
 }

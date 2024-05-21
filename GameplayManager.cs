@@ -6,7 +6,7 @@ public class GameplayManager : MonoBehaviour
 {
     [SerializeField] private GameObject pointer;
     [SerializeField] private float verticalOffset = 1.0f;
-    [SerializeField] private GameObject playContainer; // Changed from Transform to GameObject
+    [SerializeField] private GameObject playContainer;
 
     public CardRules cardRules;
     private GameManager gameManager;
@@ -17,7 +17,7 @@ public class GameplayManager : MonoBehaviour
     private string currentCombinationType = "";
 
     void Start()
-    {        
+    {
         gameManager = FindObjectOfType<GameManager>();
         if (gameManager == null)
         {
@@ -35,55 +35,22 @@ public class GameplayManager : MonoBehaviour
         {
             Debug.LogError("Play container object not assigned.");
             return;
-        }
-
-        cardValidator = new CardCombinationValidator();
-        if (cardValidator == null)
-        {
-            Debug.LogError("Failed to create an instance of CardCombinationValidator.");
-            return;
-        }
-
-        SetInitialActivePlayer();
+        }        
     }
 
     public void MovePointerToLowestCardPlayer()
     {
-        if (gameManager == null || gameManager.numberOfPlayers == 0)
+        if (gameManager == null || gameManager.pusoyDosPlayers.Length == 0)
         {
             Debug.LogWarning("No players available to find the lowest card.");
             return;
         }
 
-        Player lowestCardPlayer = null;
-        int lowestCardValue = int.MaxValue;
-
-        foreach (GameObject playerPosition in gameManager.playerPositions)
-        {
-            Player player = playerPosition.GetComponent<Player>();
-            foreach (Card card in player.hand)
-            {
-                if (card.cardValue < lowestCardValue)
-                {
-                    lowestCardValue = card.cardValue;
-                    lowestCardPlayer = player;
-                }
-            }
-        }
+        Player lowestCardPlayer = FindLowestCardPlayer();
 
         if (lowestCardPlayer != null)
         {
-            Transform playerPositionTransform = lowestCardPlayer.transform;
-            if (playerPositionTransform != null)
-            {
-                Vector3 playerPosition = playerPositionTransform.position;
-                pointer.transform.position = new Vector3(playerPosition.x, playerPosition.y + verticalOffset, playerPosition.z);
-                Debug.Log("Pointer moved to the player with the lowest card.");
-            }
-            else
-            {
-                Debug.LogWarning("Player position transform not found.");
-            }
+            MovePointerToPlayer(lowestCardPlayer);
         }
         else
         {
@@ -91,12 +58,12 @@ public class GameplayManager : MonoBehaviour
         }
     }
 
-    private void SetInitialActivePlayer()
+    private Player FindLowestCardPlayer()
     {
         Player lowestCardPlayer = null;
         int lowestCardValue = int.MaxValue;
 
-        foreach (GameObject playerPosition in gameManager.playerPositions)
+        foreach (GameObject playerPosition in gameManager.pusoyDosPlayers)
         {
             Player player = playerPosition.GetComponent<Player>();
             foreach (Card card in player.hand)
@@ -108,6 +75,13 @@ public class GameplayManager : MonoBehaviour
                 }
             }
         }
+
+        return lowestCardPlayer;
+    }
+
+    private void SetInitialActivePlayer()
+    {
+        Player lowestCardPlayer = FindLowestCardPlayer();
 
         if (lowestCardPlayer != null)
         {
@@ -123,17 +97,9 @@ public class GameplayManager : MonoBehaviour
 
     private void MovePointerToPlayer(Player player)
     {
-        Transform playerPositionTransform = player.transform;
-        if (playerPositionTransform != null)
-        {
-            Vector3 playerPosition = playerPositionTransform.position;
-            pointer.transform.position = new Vector3(playerPosition.x, playerPosition.y + verticalOffset, playerPosition.z);
-            Debug.Log($"Pointer moved to {player.playerName}");
-        }
-        else
-        {
-            Debug.LogWarning("Player position transform not found.");
-        }
+        Vector3 playerPosition = player.transform.position;
+        pointer.transform.position = new Vector3(playerPosition.x, playerPosition.y + verticalOffset, playerPosition.z);
+        Debug.Log($"Pointer moved to {player.playerName}");
     }
 
     public void PlayCards(List<Card> cardsToPlay)
@@ -153,10 +119,7 @@ public class GameplayManager : MonoBehaviour
             cardsInPlay.AddRange(cardsToPlay);
             currentCombinationType = GetCombinationType(cardsToPlay);
 
-            foreach (Card card in cardsToPlay)
-            {
-                activePlayer.hand.Remove(card);
-            }
+            activePlayer.hand.RemoveAll(card => cardsToPlay.Contains(card));
 
             foreach (Card card in cardsToPlay)
             {
@@ -202,9 +165,9 @@ public class GameplayManager : MonoBehaviour
 
     private void ProceedToNextPlayer()
     {
-        int currentIndex = System.Array.IndexOf(gameManager.playerPositions, activePlayer.transform);
-        int nextIndex = (currentIndex + 1) % gameManager.playerPositions.Length;
-        activePlayer = gameManager.playerPositions[nextIndex].GetComponent<Player>();
+        int currentIndex = System.Array.IndexOf(gameManager.pusoyDosPlayers, activePlayer.gameObject);
+        int nextIndex = (currentIndex + 1) % gameManager.pusoyDosPlayers.Length;
+        activePlayer = gameManager.pusoyDosPlayers[nextIndex].GetComponent<Player>();
         MovePointerToPlayer(activePlayer);
         Debug.Log($"{activePlayer.playerName} is now the active player.");
     }
