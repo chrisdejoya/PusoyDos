@@ -7,8 +7,8 @@ public class GameplayManager : MonoBehaviour
     [SerializeField] private GameObject pointer;
     [SerializeField] private float verticalOffset = 1.0f;
     [SerializeField] private GameObject playContainer;
+    [SerializeField] private CardRules cardRules;
 
-    public CardRules cardRules;
     private GameManager gameManager;
     private Player activePlayer;
     private CardCombinationValidator cardValidator;
@@ -35,7 +35,9 @@ public class GameplayManager : MonoBehaviour
         {
             Debug.LogError("Play container object not assigned.");
             return;
-        }        
+        }
+
+        cardValidator = new CardCombinationValidator();
     }
 
     public void MovePointerToLowestCardPlayer()
@@ -47,7 +49,6 @@ public class GameplayManager : MonoBehaviour
         }
 
         Player lowestCardPlayer = FindLowestCardPlayer();
-
         if (lowestCardPlayer != null)
         {
             MovePointerToPlayer(lowestCardPlayer);
@@ -79,22 +80,6 @@ public class GameplayManager : MonoBehaviour
         return lowestCardPlayer;
     }
 
-    private void SetInitialActivePlayer()
-    {
-        Player lowestCardPlayer = FindLowestCardPlayer();
-
-        if (lowestCardPlayer != null)
-        {
-            activePlayer = lowestCardPlayer;
-            MovePointerToPlayer(activePlayer);
-            Debug.Log($"{activePlayer.playerName} is the active player with the lowest card.");
-        }
-        else
-        {
-            Debug.LogWarning("No lowest card player found.");
-        }
-    }
-
     private void MovePointerToPlayer(Player player)
     {
         Vector3 playerPosition = player.transform.position;
@@ -112,35 +97,44 @@ public class GameplayManager : MonoBehaviour
 
         if (IsValidCombination(cardsToPlay))
         {
-            currentCardsToBeat.Clear();
-            currentCardsToBeat.AddRange(cardsInPlay);
-
-            cardsInPlay.Clear();
-            cardsInPlay.AddRange(cardsToPlay);
-            currentCombinationType = GetCombinationType(cardsToPlay);
-
-            activePlayer.hand.RemoveAll(card => cardsToPlay.Contains(card));
-
-            foreach (Card card in cardsToPlay)
-            {
-                Transform cardTransform = playContainer.transform.Find(card.cardName);
-                if (cardTransform != null)
-                {
-                    cardTransform.SetParent(playContainer.transform);
-                }
-                else
-                {
-                    Debug.LogWarning($"Card GameObject not found: {card.cardName}");
-                }
-            }
-
-            Debug.Log($"Cards played: {string.Join(", ", cardsToPlay.Select(card => card.cardName))}");
+            UpdateCardsInPlay(cardsToPlay);
+            MoveCardsToPlayContainer(cardsToPlay);
             ProceedToNextPlayer();
         }
         else
         {
             Debug.LogWarning("Invalid card combination.");
         }
+    }
+
+    private void UpdateCardsInPlay(List<Card> cardsToPlay)
+    {
+        currentCardsToBeat.Clear();
+        currentCardsToBeat.AddRange(cardsInPlay);
+
+        cardsInPlay.Clear();
+        cardsInPlay.AddRange(cardsToPlay);
+        currentCombinationType = GetCombinationType(cardsToPlay);
+
+        activePlayer.hand.RemoveAll(card => cardsToPlay.Contains(card));
+    }
+
+    private void MoveCardsToPlayContainer(List<Card> cardsToPlay)
+    {
+        foreach (Card card in cardsToPlay)
+        {
+            Transform cardTransform = playContainer.transform.Find(card.cardName);
+            if (cardTransform == null)
+            {
+                // Instantiate and set parent if cardTransform doesn't exist
+                //GameObject cardObject = Instantiate(gameManager.deck.cardPrefab, playContainer.transform);
+                //cardObject.name = card.cardName;
+                //cardTransform = cardObject.transform;
+            }
+            cardTransform.SetParent(playContainer.transform);
+        }
+
+        Debug.Log($"Cards played: {string.Join(", ", cardsToPlay.Select(card => card.cardName))}");
     }
 
     private bool IsValidCombination(List<Card> cards)

@@ -86,7 +86,7 @@ public class Deck : MonoBehaviour
         {
             cardDisplay.cardName = card.cardName;
             cardDisplay.cardValue = card.cardValue;
-            cardDisplay.DisplayCard();
+            //cardDisplay.DisplayCard();
         }
         else
         {
