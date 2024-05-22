@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using System.IO;
 
 public class Deck : MonoBehaviour
@@ -79,7 +80,11 @@ public class Deck : MonoBehaviour
     {
         // Instantiate card prefab at start position and set its parent to dealerTransform
         GameObject cardObj = Instantiate(cardPrefab, startPosition, Quaternion.identity, dealerTransform);
-        cardObj.name = card.cardName;
+        cardObj.name = card.cardName;        
+
+        // Get references to rank and suit GameObjects
+        Transform rankTransform = cardObj.transform.Find("rank");
+        Transform suitTransform = cardObj.transform.Find("suit");
 
         // Configure CardDisplay component if present
         if (cardObj.TryGetComponent(out CardDisplay cardDisplay))
@@ -91,6 +96,34 @@ public class Deck : MonoBehaviour
         else
         {
             Debug.LogError("Card prefab is missing CardDisplay script.");
+        }
+
+        // Assign sprites to rank and suit based on card's Rank and Suit
+        if (rankTransform != null && suitTransform != null)
+        {
+            SpriteRenderer rankRenderer = rankTransform.GetComponent<SpriteRenderer>();
+            SpriteRenderer suitRenderer = suitTransform.GetComponent<SpriteRenderer>();
+
+            // Load sprites from Resources folder
+            Sprite rankSprite = Resources.Load<Sprite>("Sprites/" + card.Rank);
+            Sprite suitSprite = Resources.Load<Sprite>("Sprites/" + card.Suit);
+
+            // Check if sprites are loaded successfully
+            if (rankSprite != null && suitSprite != null)
+            {
+                // Set sprite colors based on suit
+                Color spriteColor = (card.Suit == "Hearts" || card.Suit == "Diamonds") ? Color.red : Color.black;
+
+                // Assign sprites and colors
+                rankRenderer.sprite = rankSprite;
+                suitRenderer.sprite = suitSprite;
+                rankRenderer.color = spriteColor;
+                suitRenderer.color = spriteColor;
+            }
+            else
+            {
+                Debug.LogError("Missing sprite for card rank or suit.");
+            }
         }
 
         return cardObj;
